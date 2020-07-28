@@ -9,11 +9,17 @@ from cryptography.fernet import Fernet # Encryption
 # Grab key for encryption
 def read_key():
 	try:
+        # Ben: You should probably take a parameter for the keyfile
+        #  instead of or in addition to looking for it locally.
 		# Open the file the Server made with thee key
 		file = open('Definitely_Not_the_Key', 'rb')
 		print("Successfully retreived key")
 		return file.read()
 	except Exception as error_message:
+        # Ben: Instead of casting a wide net, try to except the exact
+        # situations that arise and deal with them appropriately. For example,
+        # if you get a FileNotFoundError you can tell the user how to generate
+        # a key.
 		print('General error', str(error_message))
 		sys.exit()
 
@@ -30,6 +36,8 @@ def connect(saddr):
 		client_socket.setblocking(False)
 		return client_socket
 	except Exception as error_message:
+        # Ben: I wont comment all of them, but take what I said about exceptions
+        # above and apply it to every 'except Exception'
 		print('General error', str(error_message))
 		sys.exit()
 
@@ -43,6 +51,8 @@ def username(client_socket):
 		# Header protocol
 		username_length = f"{len(encoded_username):<{10}}".encode('utf-8')
 		# Sending username to server to track (0 for add user, 1 for send message)
+        # Ben: Just like with C, send (and recv) in python isn't guaranteed to send all
+        # of the bytes in one go, it should be in a loop (or use the sendall function)
 		client_socket.send(username_length + encoded_username)
 		# print(f"Protocol Sent: {username_length + encoded_username}")
 		return username
@@ -78,12 +88,19 @@ def chat(client_socket, name, key):
 			try:
 				while True:
 					# Receive messages
+                    # Ben: Why are you sending junk?
 					junk = client_socket.recv(1)
 					username_length = client_socket.recv(10)
 					if not len(username_length):
 						print("Connection closed by server")
 						sys.exit()
 					message_length = int(client_socket.recv(10).decode('utf-8').strip())
+                    # Ben: I know I've commented about it many times but if you only receive 5 bytes here,
+                    # the other 5 bytes of message length will end up in the username length instead,
+                    # probably causing your client to freeze as it waits for "0000500000" bytes.
+                    #   Also, try out sending bytes as an integer instead of a string. You're using 10
+                    # bytes to convey a number between 0 and 9,999,999,999 when you can convey a number
+                    # between 0 and 4,294,967,295 (2**32 - 1) with just 4 bytes using an integer
 					username = client_socket.recv(int(username_length.decode('utf-8').strip())).decode('utf-8')
 					# Decode to readable string
 					message = Fernet(key).decrypt(client_socket.recv(message_length)).decode('utf-8')
@@ -99,6 +116,9 @@ def chat(client_socket, name, key):
 
 def main():
 	# Ask for user input for server information, then try to connect
+    # Ben: Make sure you test nonsense inputs like "Apple Pie" for a server address and
+    # display a meaningful error message like "That isn't a valid IP." or "That port number
+    # is out of range."
 	client_socket = connect((input("Server IP: "), int(input("Server Port: "))))
 	name = username(client_socket)
 	chat(client_socket, name, read_key())

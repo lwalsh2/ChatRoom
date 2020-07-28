@@ -13,6 +13,8 @@ def create_key():
 	try:
 		key = Fernet.generate_key()
 		print(f"Your current key is: {key}")
+        # Ben: Try to use a "with open():" statement whenever you are opening
+        # and closing a file in the same function.
 		file = open('Definitely_Not_the_Key', 'wb')
 		file.write(key)
 		file.close()
@@ -119,6 +121,7 @@ def run_server(server_socket, key):
 def main():
 	# Ask for user input for server information, then try to connect
 	# print("in main")
+    # Ben: See my comment about input validation on chatClient.py
 	server_socket = connect((input("Server IP: "), int(input("Server Port: "))))
 	run_server(server_socket, create_key())
 	# await asyncio.wait([run_server(server_socket, create_key()), await_inevitable()])
